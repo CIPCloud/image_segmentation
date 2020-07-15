@@ -37,8 +37,19 @@ import cv2
 from mrcnn.visualize import display_instances
 import matplotlib.pyplot as plt
 
+# suppress deprecated warnings.
+import warnings
+warnings.filterwarnings('ignore',category=FutureWarning)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+import tensorflow as tf
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+from tensorflow.python.util import deprecation
+deprecation._PRINT_DEPRECATION_WARNINGS = False
+
+
 # Root directory of the project
-ROOT_DIR = 'C:/Users/Sourish/Mask_RCNN/'
+ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
+
 
 # Import Mask RCNN
 sys.path.append(ROOT_DIR)  # To find local version of the library
@@ -51,6 +62,8 @@ COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
 DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
+if not os.path.exists(DEFAULT_LOGS_DIR):
+    os.makedirs(DEFAULT_LOGS_DIR)
 
 ############################################################
 #  Configurations
@@ -94,7 +107,7 @@ class CustomDataset(utils.Dataset):
 
         # Train or validation dataset?
         assert subset in ["train", "val"]
-        dataset_dir = os.path.join(dataset_dir + subset)
+        dataset_dir = os.path.join(dataset_dir , subset)
 
         # Load annotations
         # VGG Image Annotator saves each image in the form:
@@ -111,7 +124,7 @@ class CustomDataset(utils.Dataset):
         #   'size': 100202
         # }
         # We mostly care about the x and y coordinates of each region
-        annotations1 = json.load(open(os.path.join(dataset_dir + '/' + "via_region_data.json"),'r',encoding="utf8",errors='ignore'))
+        annotations1 = json.load(open(os.path.join(dataset_dir , "via_region_data.json"),'r',encoding="utf8",errors='ignore'))
         # print(annotations1)
         annotations = list(annotations1.values())  # don't need the dict keys
 
@@ -213,6 +226,9 @@ def color_splash(image, mask):
     # We're treating all instances as one, so collapse the mask into one layer
     mask = (np.sum(mask, -1, keepdims=True) >= 1)
     # Copy color pixels from the original color image where mask is set
+    print("Shapes: mask={} image={} gray={}".format(mask.shape,image.shape,gray.shape))
+    if image.shape[-1] == 4:
+        image = image[..., :3]
     if mask.shape[0] > 0:
         splash = np.where(mask, image, gray).astype(np.uint8)
     else:
@@ -230,6 +246,7 @@ def detect_and_color_splash(model, image_path=None):
     image = skimage.io.imread(args.image)
         # Detect objects
     r = model.detect([image], verbose=1)[0]
+    print("Detecting images:{}".format(r))
         # Color splash
     splash = color_splash(image, r['masks'])
         # Save output
@@ -244,7 +261,6 @@ def detect_and_color_splash(model, image_path=None):
 
 if __name__ == '__main__':
     import argparse
-
     # Parse command line arguments
     parser = argparse.ArgumentParser(
         description='Train Mask R-CNN to detect custom class.')
@@ -308,7 +324,7 @@ if __name__ == '__main__':
             utils.download_trained_weights(weights_path)
     elif args.weights.lower() == "last":
         # Find last trained weights
-        weights_path = model.find_last()[1]
+        weights_path = model.find_last()
     elif args.weights.lower() == "imagenet":
         # Start from ImageNet trained weights
         weights_path = model.get_imagenet_weights()
@@ -330,8 +346,7 @@ if __name__ == '__main__':
     if args.command == "train":
         train(model)
     elif args.command == "splash":
-        detect_and_color_splash(model, image_path=args.image,
-                                video_path=args.video)
+        detect_and_color_splash(model, image_path=args.image)
     else:
         print("'{}' is not recognized. "
               "Use 'train' or 'splash'".format(args.command))
