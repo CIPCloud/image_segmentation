@@ -27,31 +27,19 @@ Usage: import the module (see Jupyter notebooks for examples), or run from
     python3 balloon.py splash --weights=last --video=<URL or path to file>
 """
 
+import datetime
+import json
 import os
 import sys
-import json
-import datetime
+
 import numpy as np
 import skimage.draw
-import cv2
-from mrcnn.visualize import display_instances
-import matplotlib.pyplot as plt
-
-# suppress deprecated warnings.
-import warnings
-warnings.filterwarnings('ignore',category=FutureWarning)
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-import tensorflow as tf
-tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
-from tensorflow.python.util import deprecation
-deprecation._PRINT_DEPRECATION_WARNINGS = False
-
+from skimage import color
+from skimage import io
 
 # Root directory of the project
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-
-# Import Mask RCNN
 sys.path.append(ROOT_DIR)  # To find local version of the library
 from mrcnn.config import Config
 from mrcnn import model as modellib, utils
@@ -64,6 +52,7 @@ COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
 DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 if not os.path.exists(DEFAULT_LOGS_DIR):
     os.makedirs(DEFAULT_LOGS_DIR)
+
 
 ############################################################
 #  Configurations
@@ -107,7 +96,7 @@ class CustomDataset(utils.Dataset):
 
         # Train or validation dataset?
         assert subset in ["train", "val"]
-        dataset_dir = os.path.join(dataset_dir , subset)
+        dataset_dir = os.path.join(dataset_dir, subset)
 
         # Load annotations
         # VGG Image Annotator saves each image in the form:
@@ -124,7 +113,8 @@ class CustomDataset(utils.Dataset):
         #   'size': 100202
         # }
         # We mostly care about the x and y coordinates of each region
-        annotations1 = json.load(open(os.path.join(dataset_dir , "via_region_data.json"),'r',encoding="utf8",errors='ignore'))
+        annotations1 = json.load(
+            open(os.path.join(dataset_dir, "via_region_data.json"), 'r', encoding="utf8", errors='ignore'))
         # print(annotations1)
         annotations = list(annotations1.values())  # don't need the dict keys
 
@@ -205,9 +195,9 @@ def train(model):
     # Since we're using a very small dataset, and starting from
     # COCO trained weights, we don't need to train too long. Also,
     # no need to train all layers, just the heads should do it.
-	# Download mask_rcnn_coco.h5 weights before starting the training
+    # Download mask_rcnn_coco.h5 weights before starting the training
     print("Training network heads")
-    model.train(dataset_train,dataset_val,
+    model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
                 epochs=15,
                 layers='heads')
@@ -226,7 +216,7 @@ def color_splash(image, mask):
     # We're treating all instances as one, so collapse the mask into one layer
     mask = (np.sum(mask, -1, keepdims=True) >= 1)
     # Copy color pixels from the original color image where mask is set
-    print("Shapes: mask={} image={} gray={}".format(mask.shape,image.shape,gray.shape))
+    print("Shapes: mask={} image={} gray={}".format(mask.shape, image.shape, gray.shape))
     if image.shape[-1] == 4:
         image = image[..., :3]
     if mask.shape[0] > 0:
@@ -237,23 +227,23 @@ def color_splash(image, mask):
 
 
 def detect_and_color_splash(model, image_path=None):
-    assert image_path 
-
+    assert image_path
 
     # Run model detection and generate the color splash effect
     print("Running on {}".format(args.image))
-        # Read image
+    # Read image
     image = skimage.io.imread(args.image)
-        # Detect objects
+    # Detect objects
     r = model.detect([image], verbose=1)[0]
     print("Detecting images:{}".format(r))
-        # Color splash
+    # Color splash
     splash = color_splash(image, r['masks'])
-        # Save output
+    # Save output
     file_name = "splash_{:%Y%m%dT%H%M%S}.png".format(datetime.datetime.now())
     skimage.io.imsave(file_name, splash)
-    
+
     print("Saved to ", file_name)
+
 
 ############################################################
 #  Training
@@ -261,6 +251,7 @@ def detect_and_color_splash(model, image_path=None):
 
 if __name__ == '__main__':
     import argparse
+
     # Parse command line arguments
     parser = argparse.ArgumentParser(
         description='Train Mask R-CNN to detect custom class.')
@@ -289,8 +280,8 @@ if __name__ == '__main__':
     if args.command == "train":
         assert args.dataset, "Argument --dataset is required for training"
     elif args.command == "splash":
-        assert args.image or args.video,\
-               "Provide --image or --video to apply color splash"
+        assert args.image or args.video, \
+            "Provide --image or --video to apply color splash"
 
     print("Weights: ", args.weights)
     print("Dataset: ", args.dataset)
@@ -305,6 +296,8 @@ if __name__ == '__main__':
             # one image at a time. Batch size = GPU_COUNT * IMAGES_PER_GPU
             GPU_COUNT = 1
             IMAGES_PER_GPU = 1
+
+
         config = InferenceConfig()
     config.display()
 
