@@ -22,7 +22,8 @@ This repository detects instances of scratches on a car and encompasses it with 
 
 Automated car damage detection using Instance Segmentation(Mask R-CNN)
 
-image ID: scratch.image53.jpeg (2) C:/Users/Sourish/Mask_RCNN/custom/val\image53.jpeg
+image ID: scratch.image53.jpeg (2)  
+```text
 Processing 1 images
 image                    shape: (1024, 1024, 3)       min:    0.00000  max:  255.00000  uint8
 molded_images            shape: (1, 1024, 1024, 3)    min: -123.70000  max:  151.10000  float64
@@ -33,3 +34,9 @@ gt_bbox                  shape: (2, 4)                min:  315.00000  max:  728
 gt_mask                  shape: (1024, 1024, 2)       min:    0.00000  max:    1.00000  bool
 The car has:2 damages
 
+```
+
+### ToDo
+area of mask:
+
+np.reshape(r['masks'], (-1, r['masks'].shape[-1])).astype(np.float32).sum()
