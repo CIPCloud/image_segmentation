@@ -35,8 +35,13 @@ gt_mask                  shape: (1024, 1024, 2)       min:    0.00000  max:    1
 The car has:2 damages
 
 ```
+### Result
+![result](image/result.png)
 
-### ToDo
-area of mask:
-
-np.reshape(r['masks'], (-1, r['masks'].shape[-1])).astype(np.float32).sum()
+### Insight
+#### Area covered:
+```text
+Image size: w=2119 h=1415 mask PIxels:50043 area=0.016689984775137282
+Single pix area:8.404524435654528e-05
+Total area:4.205876163334596
+```
