@@ -45,3 +45,13 @@ Image size: w=2119 h=1415 mask PIxels:50043 area=0.016689984775137282
 Single pix area:8.404524435654528e-05
 Total area:4.205876163334596
 ```
+## Deployment
+Following approach should be explored,
++ create a SageMaker notebook with GPU capabilities to train the model.
++ This notebook should store the trained model in `s3://cip.models/segmentation/<scratch|dent>/latest/mask_cnn_
+<scratch|dent>.h5`
++ Create a python code with a wrapper api , say in `flask`, that performs `inference`.
++ containerize this code and deploy it to **ECR**
++ Make a model from the container
++ Make a SageMaker `endpoint` from this model.
++ Use this to serve up insights.
