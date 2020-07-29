@@ -30,7 +30,7 @@ import boto3
 import json
 import os
 import sys
-import logging
+
 import numpy as np
 import skimage.draw
 import pathlib
@@ -52,6 +52,7 @@ DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 EPOCHS=30
 MODEL_BUCKET="cip.models"
 DIR_PATTERN = re.compile(".*/$")
+MODEL_TYPE="segmentation"
 TRAINING_LABEL="scratch"
 
 ############################################################
@@ -192,16 +193,16 @@ def downloadDirectoryFroms3(bucketName, remoteDirectoryName):
 def uploadModel(bucket, model):
     model_path = model.find_last()
     model_file= os.path.basename(model_path)
-    model_dir = os.path.join(TRAINING_LABEL,pathlib.PurePath(model_path).parent.name)
-    logging.info("Model path:{} model_dir={} model:{}".format(model_path,model_dir,model_file))
+    model_dir = os.path.join(MODEL_TYPE,TRAINING_LABEL,pathlib.PurePath(model_path).parent.name)
+    print("Model path:{} model_dir={} model:{}".format(model_path,model_dir,model_file))
     
     s3 = boto3.client('s3')
     try:
         response = s3.put_object(Bucket=bucket, Key=model_dir +'/')
-        logging.info("  %s", response)
+        print("  %s", response)
         s3.upload_file(model_path,MODEL_BUCKET, os.path.join(model_dir,model_file))
     except Exception as e:
-        logging.warn("Bucket error %s", e)
+        print("Bucket error %s", e)
     
 def train(model):
     """Train the model."""
