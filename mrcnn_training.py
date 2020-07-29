@@ -26,13 +26,14 @@ Usage: import the module (see Jupyter notebooks for examples), or run from
     # Apply color splash to video using the last weights you trained
     python3 balloon.py splash --weights=last --video=<URL or path to file>
 """
-
+import boto3
 import json
 import os
 import sys
-
+import logging
 import numpy as np
 import skimage.draw
+import pathlib
 
 # Root directory of the project
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -49,7 +50,7 @@ COCO_WEIGHTS_PATH = os.path.join(COCO_MODEL_DIR,"mask_rcnn_coco.h5")
 # through the command line argument --logs
 DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 EPOCHS=30
-
+MODEL_BUCKET="cip.models"
 
 
 ############################################################
@@ -176,7 +177,20 @@ class CustomDataset(utils.Dataset):
         else:
             super(self.__class__, self).image_reference(image_id)
 
-
+def uploadModel(bucket, model):
+    model_path = model.find_last()
+    model_file= os.path.basename(model_path)
+    model_dir = pathlib.PurePath(model_path).parent.name
+    logging.info("Model path:{} model_dir={} model:{}".format(model_path,model_dir,model_file))
+    
+    s3 = boto3.client('s3')
+    try:
+        response = s3.put_object(Bucket=bucket, Key=model_dir +'/')
+        logging.info("  %s", response)
+        s3.meta.client.upload_file(model_path,"cip.models", os.path.join(model_dir,model_file))
+    except Exception as e:
+        logging.warn("Bucket error %s", e)
+    
 def train(model):
     """Train the model."""
     # Training dataset.
@@ -243,3 +257,4 @@ if __name__ == '__main__':
             "mrcnn_bbox", "mrcnn_mask"])
     
     train(model)
+    uploadModel(MODEL_BUCKET,model)
