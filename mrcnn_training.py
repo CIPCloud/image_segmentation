@@ -52,6 +52,7 @@ DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 EPOCHS=30
 MODEL_BUCKET="cip.models"
 DIR_PATTERN = re.compile(".*/$")
+TRAINING_LABEL="scratch"
 
 ############################################################
 #  Configurations
@@ -63,7 +64,7 @@ class CustomConfig(Config):
     Derives from the base Config class and overrides some values.
     """
     # Give the configuration a recognizable name
-    NAME = "scratch"
+    NAME = TRAINING_LABEL
 
     # We use a GPU with 6GB memory, which can fit only one image.
     # Adjust down if you use a smaller GPU.
@@ -91,7 +92,7 @@ class CustomDataset(utils.Dataset):
         subset: Subset to load: train or val
         """
         # Add classes. We have only one class to add.
-        self.add_class("scratch", 1, "scratch")
+        self.add_class(TRAINING_LABEL, 1, TRAINING_LABEL)
 
         # Train or validation dataset?
         assert subset in ["train", "val"]
@@ -137,7 +138,7 @@ class CustomDataset(utils.Dataset):
             height, width = image.shape[:2]
 
             self.add_image(
-                "scratch",  ## for a single class just add the name here
+                TRAINING_LABEL,  ## for a single class just add the name here
                 image_id=a['filename'],  # use file name as a unique image id
                 path=image_path,
                 width=width, height=height,
@@ -152,7 +153,7 @@ class CustomDataset(utils.Dataset):
         """
         # If not a balloon dataset image, delegate to parent class.
         image_info = self.image_info[image_id]
-        if image_info["source"] != "scratch":
+        if image_info["source"] != TRAINING_LABEL:
             return super(self.__class__, self).load_mask(image_id)
 
         # Convert polygons to a bitmap mask of shape
@@ -172,7 +173,7 @@ class CustomDataset(utils.Dataset):
     def image_reference(self, image_id):
         """Return the path of the image."""
         info = self.image_info[image_id]
-        if info["source"] == "scratch":
+        if info["source"] == TRAINING_LABEL:
             return info["path"]
         else:
             super(self.__class__, self).image_reference(image_id)
@@ -191,14 +192,14 @@ def downloadDirectoryFroms3(bucketName, remoteDirectoryName):
 def uploadModel(bucket, model):
     model_path = model.find_last()
     model_file= os.path.basename(model_path)
-    model_dir = pathlib.PurePath(model_path).parent.name
+    model_dir = os.path.join(TRAINING_LABEL,pathlib.PurePath(model_path).parent.name)
     logging.info("Model path:{} model_dir={} model:{}".format(model_path,model_dir,model_file))
     
     s3 = boto3.client('s3')
     try:
         response = s3.put_object(Bucket=bucket, Key=model_dir +'/')
         logging.info("  %s", response)
-        s3.meta.client.upload_file(model_path,"cip.models", os.path.join(model_dir,model_file))
+        s3.upload_file(model_path,MODEL_BUCKET, os.path.join(model_dir,model_file))
     except Exception as e:
         logging.warn("Bucket error %s", e)
     
