@@ -34,7 +34,7 @@ import logging
 import numpy as np
 import skimage.draw
 import pathlib
-
+import re
 # Root directory of the project
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -51,7 +51,7 @@ COCO_WEIGHTS_PATH = os.path.join(COCO_MODEL_DIR,"mask_rcnn_coco.h5")
 DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 EPOCHS=30
 MODEL_BUCKET="cip.models"
-
+DIR_PATTERN = re.compile(".*/$")
 
 ############################################################
 #  Configurations
@@ -177,6 +177,17 @@ class CustomDataset(utils.Dataset):
         else:
             super(self.__class__, self).image_reference(image_id)
 
+def downloadDirectoryFroms3(bucketName, remoteDirectoryName):
+    s3_resource = boto3.resource('s3')
+    bucket = s3_resource.Bucket(bucketName) 
+    for obj in bucket.objects.filter(Prefix = remoteDirectoryName):
+        print(">>Processing:{}".format(obj.key))
+        if not os.path.exists(os.path.dirname(obj.key)):
+            os.makedirs(os.path.dirname(obj.key))
+        if DIR_PATTERN.match(obj.key):
+            continue
+        bucket.download_file(obj.key, obj.key)  
+        
 def uploadModel(bucket, model):
     model_path = model.find_last()
     model_file= os.path.basename(model_path)
@@ -230,13 +241,22 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', required=True,
                         metavar="/path/to/custom/dataset/",
                         help='Directory of the training dataset')
+    parser.add_argument('--bucket', required=False,
+                        metavar="bucket name",
+                        help='name of s3 bucket')
     args = parser.parse_args()
 
+    if (args.bucket is not None):
+        print("Downloading from bucket:{} dir:{}".format(args.bucket,args.dataset))
+        if os.path.exists(args.dataset):
+            rename_dir=args.dataset+"__tmp"
+            print(">>Renaming existing dir before fetching from s3:{}".format(rename_dir))
+            os.rename(args.dataset,rename_dir )
+        downloadDirectoryFroms3(args.bucket,args.dataset)
     # Validate arguments
     assert args.dataset, "Argument --dataset is required for training"
-    print("Dataset: ", args.dataset)
-
-
+    print("Dataset used for training:{}".format(args.dataset))
+    
     # Configurations
     config = CustomConfig()
     config.display()
