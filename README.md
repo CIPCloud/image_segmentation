@@ -51,8 +51,15 @@ create a SageMaker notebook with GPU capabilities to train the model.
 Training is performed as follows,
 
 ### Training:
-```python
-python mrcnn_training.py --dataset=data/
+```shell script
+bash mrcnn_train.sh
 ```
 The generated model will be uploaded to s3://cip.models/segmentation/scratch/<scratch_dir> folder
 Eventually, this model after verification should be uploaded to the `latest/` folder under the bucket.
+
+### New Label
+If you wish to change the dataset and the label, 
++ look for TRAINING_LABEL variable in mrcnn_training.py, change it to appropriate new label
++ look for work scratch and change appropriately.
++ ensure that data exists in S3 for new label
++ change `mrcnn_train.sh` shell script to reflect the new label
