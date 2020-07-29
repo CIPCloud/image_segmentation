@@ -246,24 +246,25 @@ if __name__ == '__main__':
     parser.add_argument('--bucket', required=False,
                         metavar="bucket name",
                         help='name of s3 bucket')
-    parser.add_argument('--download_training_data', required=False,
-                        metavar="True/False",
+    parser.add_argument('--downloadTrainingData', required=False,
+                        metavar="Y/N",
                         help='should we download from s3 bucket')
     args = parser.parse_args()
 
-    print("is download:{}".format(args.download_training_data))
-    
-    if (args.bucket is not None and args.download_training_data):
+    if (args.downloadTrainingData=="Y") and (args.bucket is not None):
         print("Downloading from bucket:{} dir:{}".format(args.bucket,args.dataset))
         if os.path.exists(args.dataset):
             rename_dir=args.dataset+"__tmp"
             print(">>Renaming existing dir before fetching from s3:{}".format(rename_dir))
             os.rename(args.dataset,rename_dir )
         downloadDirectoryFroms3(args.bucket,args.dataset)
+    else:
+        print("local training data already available")
+        
     # Validate arguments
     assert args.dataset, "Argument --dataset is required for training"
     print("Dataset used for training:{}".format(args.dataset))
-    sys.exit(1)
+    
     # Configurations
     config = CustomConfig()
     config.display()
